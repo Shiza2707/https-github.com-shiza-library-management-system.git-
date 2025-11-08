@@ -1,5 +1,4 @@
 node_modules/
-books.json
 *.log
 .DS_Store
 .env
