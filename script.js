@@ -1,21 +1,20 @@
 // Book storage using Map for hashing (ISBN as key)
 let books = new Map();
 let currentPage = 'dashboard';
-const API_BASE = 'http://localhost:3000';
 
-// Load books from server
-async function loadBooks() {
-    try {
-        const response = await fetch(`${API_BASE}/books`);
-        if (response.ok) {
-            const booksArray = await response.json();
-            books = new Map(booksArray.map(book => [book.isbn, book]));
-        } else {
-            console.error('Failed to load books from server');
-        }
-    } catch (error) {
-        console.error('Error loading books:', error);
+// Load books from localStorage
+function loadBooks() {
+    const storedBooks = localStorage.getItem('libraryBooks');
+    if (storedBooks) {
+        const booksArray = JSON.parse(storedBooks);
+        books = new Map(booksArray.map(book => [book.isbn, book]));
     }
+}
+
+// Save books to localStorage
+function saveBooks() {
+    const booksArray = Array.from(books.values());
+    localStorage.setItem('libraryBooks', JSON.stringify(booksArray));
 }
 
 // Navigation
@@ -30,51 +29,27 @@ function showPage(pageId) {
 }
 
 // Function to add or update a book
-async function saveBook(title, author, isbn, year, image, editIsbn = null) {
-    try {
-        const method = editIsbn ? 'PUT' : 'POST';
-        const url = editIsbn ? `${API_BASE}/books/${editIsbn}` : `${API_BASE}/books`;
-        const response = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, author, isbn, year, image })
-        });
-        if (response.ok) {
-            const savedBook = await response.json();
-            books.set(savedBook.isbn, savedBook);
-            if (editIsbn && editIsbn !== isbn) {
-                books.delete(editIsbn);
-            }
-            updateStats();
-            return true;
-        } else {
-            const error = await response.json();
-            alert(error.error);
-            return false;
-        }
-    } catch (error) {
-        console.error('Error saving book:', error);
-        alert('Failed to save book. Please try again.');
+function saveBook(title, author, isbn, year, image, editIsbn = null) {
+    if (editIsbn && editIsbn !== isbn) {
+        books.delete(editIsbn);
+    }
+    if (books.has(isbn) && editIsbn !== isbn) {
+        alert('Book with this ISBN already exists!');
         return false;
     }
+    books.set(isbn, { title, author, isbn, year, image: image || 'https://via.placeholder.com/100x150/333/fff?text=No+Image' });
+    saveBooks();
+    updateStats();
+    return true;
 }
 
 // Function to delete a book
-async function deleteBook(isbn) {
+function deleteBook(isbn) {
     if (confirm('Are you sure you want to delete this book?')) {
-        try {
-            const response = await fetch(`${API_BASE}/books/${isbn}`, { method: 'DELETE' });
-            if (response.ok) {
-                books.delete(isbn);
-                updateStats();
-                if (currentPage === 'list') displayBooks();
-            } else {
-                alert('Failed to delete book.');
-            }
-        } catch (error) {
-            console.error('Error deleting book:', error);
-            alert('Failed to delete book. Please try again.');
-        }
+        books.delete(isbn);
+        saveBooks();
+        updateStats();
+        if (currentPage === 'list') displayBooks();
     }
 }
 
@@ -93,50 +68,46 @@ function editBook(isbn) {
 }
 
 // Function to lookup a book by ISBN
-async function lookupBook(isbn) {
-    try {
-        const response = await fetch(`${API_BASE}/books/${isbn}`);
-        const resultDiv = document.getElementById('search-result');
-        if (response.ok) {
-            const book = await response.json();
-            resultDiv.innerHTML = `
-                <h2>Book Found</h2>
-                <img src="${book.image}" alt="${book.title}" class="book-image">
-                <p><strong>Title:</strong> ${book.title}</p>
-                <p><strong>Author:</strong> ${book.author}</p>
-                <p><strong>ISBN:</strong> ${book.isbn}</p>
-                <p><strong>Publication Year:</strong> ${book.year}</p>
-            `;
-        } else {
-            resultDiv.innerHTML = '<h2>Book not found</h2><p>Please check the ISBN and try again.</p>';
-        }
-    } catch (error) {
-        console.error('Error looking up book:', error);
-        document.getElementById('search-result').innerHTML = '<h2>Error</h2><p>Failed to search for book. Please try again.</p>';
+function lookupBook(isbn) {
+    const book = books.get(isbn);
+    const resultDiv = document.getElementById('search-result');
+    if (book) {
+        resultDiv.innerHTML = `
+            <div class="book-card">
+                <img src="${book.image}" alt="${book.title}">
+                <h3>${book.title}</h3>
+                <p>Author: ${book.author}</p>
+                <p>ISBN: ${book.isbn}</p>
+                <p>Year: ${book.year}</p>
+                <div class="card-actions">
+                    <button class="edit-btn" onclick="editBook('${book.isbn}')">✏️ Edit</button>
+                    <button class="delete-btn" onclick="deleteBook('${book.isbn}')">🗑️ Delete</button>
+                </div>
+            </div>
+        `;
+    } else {
+        resultDiv.innerHTML = '<p>No book found with that ISBN.</p>';
     }
 }
 
-// Function to display books sorted by title
+// Function to display books
 function displayBooks(filter = '') {
     const bookCards = document.getElementById('book-cards');
     bookCards.innerHTML = '';
-    const sortedBooks = Array.from(books.values()).sort((a, b) => a.title.localeCompare(b.title));
-    const filteredBooks = sortedBooks.filter(book =>
+    const filteredBooks = Array.from(books.values()).filter(book =>
         book.title.toLowerCase().includes(filter.toLowerCase()) ||
         book.author.toLowerCase().includes(filter.toLowerCase()) ||
-        book.isbn.toLowerCase().includes(filter.toLowerCase())
+        book.isbn.includes(filter)
     );
     filteredBooks.forEach(book => {
         const card = document.createElement('div');
         card.className = 'book-card';
         card.innerHTML = `
-            <img src="${book.image}" alt="${book.title}" class="book-image">
-            <div class="book-details">
-                <h3>${book.title}</h3>
-                <p><strong>Author:</strong> ${book.author}</p>
-                <p><strong>ISBN:</strong> ${book.isbn}</p>
-                <p><strong>Year:</strong> ${book.year}</p>
-            </div>
+            <img src="${book.image}" alt="${book.title}">
+            <h3>${book.title}</h3>
+            <p>Author: ${book.author}</p>
+            <p>ISBN: ${book.isbn}</p>
+            <p>Year: ${book.year}</p>
             <div class="card-actions">
                 <button class="edit-btn" onclick="editBook('${book.isbn}')">✏️ Edit</button>
                 <button class="delete-btn" onclick="deleteBook('${book.isbn}')">🗑️ Delete</button>
