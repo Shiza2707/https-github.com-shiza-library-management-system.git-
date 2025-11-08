@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav>
+        <button id="dashboard-btn" class="nav-btn active">🏠 Dashboard</button>
+        <button id="search-btn" class="nav-btn">🔍 Search</button>
+        <button id="list-btn" class="nav-btn">📚 Book List</button>
+        <button id="add-btn" class="nav-btn">➕ Add Book</button>
+    </nav>
+    <div id="dashboard" class="page active">
+        <h1>Library Dashboard</h1>
+        <div class="stats">
+            <div class="stat-card">
+                <h2>Total Books</h2>
+                <p id="total-books">0</p>
+            </div>
+        </div>
+        <div class="search-bar">
+            <input type="text" id="dashboard-search" placeholder="Enter ISBN to search">
+            <button id="dashboard-search-btn">🔍 Search</button>
+        </div>
+        <button id="view-all-btn" class="btn">📚 View All Books</button>
+    </div>
+    <div id="search" class="page">
+        <h1>Search Book by ISBN</h1>
+        <form id="search-form">
+            <input type="text" id="search-isbn" placeholder="Enter ISBN" required>
+            <button type="submit" class="btn">🔍 Lookup</button>
+        </form>
+        <div id="search-result"></div>
+    </div>
+    <div id="list" class="page">
+        <h1>All Books</h1>
+        <input type="text" id="filter-search" placeholder="Filter by title, author, or ISBN">
+        <div id="book-cards"></div>
+    </div>
+    <div id="add" class="page">
+        <h1>Add / Edit Book</h1>
+        <form id="book-form">
+            <input type="hidden" id="edit-isbn">
+            <label for="book-title">Title:</label>
+            <input type="text" id="book-title" required>
+            <label for="book-author">Author:</label>
+            <input type="text" id="book-author" required>
+            <label for="book-isbn">ISBN:</label>
+            <input type="text" id="book-isbn" required>
+            <label for="book-year">Publication Year:</label>
+            <input type="number" id="book-year" required>
+            <label for="book-image">Image URL:</label>
+            <input type="url" id="book-image" placeholder="https://example.com/book.jpg">
+            <button type="submit" class="btn">💾 Save Book</button>
+            <button type="button" id="cancel-edit" class="btn secondary">❌ Cancel</button>
+        </form>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
