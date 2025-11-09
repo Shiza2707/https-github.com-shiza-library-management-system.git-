@@ -2,20 +2,46 @@
 let books = new Map();
 let currentPage = 'dashboard';
 
-// Load books from server
-async function loadBooks() {
-    try {
-        const response = await fetch('/api/books');
-        const booksArray = await response.json();
+// Load books from localStorage
+function loadBooks() {
+    const storedBooks = localStorage.getItem('libraryBooks');
+    if (storedBooks) {
+        const booksArray = JSON.parse(storedBooks);
         books = new Map(booksArray.map(book => [book.isbn, book]));
-    } catch (error) {
-        console.error('Failed to load books:', error);
+    } else {
+        // Add sample books if none exist
+        const sampleBooks = [
+            {
+                title: "The Great Gatsby",
+                author: "F. Scott Fitzgerald",
+                isbn: "9780743273565",
+                year: 1925,
+                image: "https://via.placeholder.com/100x150/333/fff?text=The+Great+Gatsby"
+            },
+            {
+                title: "To Kill a Mockingbird",
+                author: "Harper Lee",
+                isbn: "9780061120084",
+                year: 1960,
+                image: "https://via.placeholder.com/100x150/333/fff?text=To+Kill+a+Mockingbird"
+            },
+            {
+                title: "1984",
+                author: "George Orwell",
+                isbn: "9780451524935",
+                year: 1949,
+                image: "https://via.placeholder.com/100x150/333/fff?text=1984"
+            }
+        ];
+        sampleBooks.forEach(book => books.set(book.isbn, book));
+        saveBooks();
     }
 }
 
-// Save books to server
-async function saveBooks() {
-    // This function is now handled by individual API calls
+// Save books to localStorage
+function saveBooks() {
+    const booksArray = Array.from(books.values());
+    localStorage.setItem('libraryBooks', JSON.stringify(booksArray));
 }
 
 // Navigation
@@ -30,45 +56,27 @@ function showPage(pageId) {
 }
 
 // Function to add or update a book
-async function saveBook(title, author, isbn, year, image, editIsbn = null) {
-    try {
-        const response = await fetch('/api/books', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, author, isbn, year, image: image || 'https://via.placeholder.com/100x150/333/fff?text=No+Image' })
-        });
-        if (response.ok) {
-            await loadBooks();
-            updateStats();
-            return true;
-        } else {
-            const error = await response.json();
-            alert('Failed to save book: ' + error.error);
-            return false;
-        }
-    } catch (error) {
-        console.error('Failed to save book:', error);
-        alert('Failed to save book');
+function saveBook(title, author, isbn, year, image, editIsbn = null) {
+    if (editIsbn && editIsbn !== isbn) {
+        books.delete(editIsbn);
+    }
+    if (books.has(isbn) && editIsbn !== isbn) {
+        alert('Book with this ISBN already exists!');
         return false;
     }
+    books.set(isbn, { title, author, isbn, year, image: image || 'https://via.placeholder.com/100x150/333/fff?text=No+Image' });
+    saveBooks();
+    updateStats();
+    return true;
 }
 
 // Function to delete a book
-async function deleteBook(isbn) {
+function deleteBook(isbn) {
     if (confirm('Are you sure you want to delete this book?')) {
-        try {
-            const response = await fetch(`/api/books/${isbn}`, { method: 'DELETE' });
-            if (response.ok) {
-                await loadBooks();
-                updateStats();
-                if (currentPage === 'list') displayBooks();
-            } else {
-                alert('Failed to delete book');
-            }
-        } catch (error) {
-            console.error('Failed to delete book:', error);
-            alert('Failed to delete book');
-        }
+        books.delete(isbn);
+        saveBooks();
+        updateStats();
+        if (currentPage === 'list') displayBooks();
     }
 }
 
